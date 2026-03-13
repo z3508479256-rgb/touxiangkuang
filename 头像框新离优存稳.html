@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>头像框预览工具 - 灰白波点离线稳存版</title>
+    <style>
+        /* ▼▼▼ 主题色：灰白波点，不使用夜间模式 ▼▼▼ */
+        :root {
+            --bg: #f3f3f3;
+            --bg-dot: #d5d5d5;
+            --card-bg: #ffffff;
+            --card-border: #d3d3d3;
+            --text-main: #222222;
+            --text-sub: #666666;
+            --btn-bg: #efefef;
+            --btn-border: #c8c8c8;
+            --btn-text: #1f1f1f;
+            --accent: #7a7a7a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text-main);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: var(--bg);
+            background-image:
+                radial-gradient(circle at 10px 10px, var(--bg-dot) 1.6px, transparent 1.6px),
+                radial-gradient(circle at 2px 2px, #e6e6e6 1px, transparent 1px);
+            background-size: 22px 22px, 22px 22px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 880px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        h2 {
+            margin: 0 0 10px 0;
+            font-size: 1rem;
+            color: var(--accent);
+            border-bottom: 1px solid #e5e5e5;
+            padding-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .btn {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            padding: 9px 12px;
+            border: 1px solid var(--btn-border);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            text-align: center;
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #e9e9e9;
+        }
+
+        .btn-outline {
+            background-color: #ffffff;
+            border: 1px solid #bdbdbd;
+            color: #333333;
+        }
+
+        input[type="file"] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .input {
+            flex: 1;
+            min-width: 220px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid #d0d0d0;
+            background: #ffffff;
+            color: var(--text-main);
+            box-sizing: border-box;
+        }
+
+        .label-text {
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        .preview-area {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+            position: sticky;
+            top: 8px;
+            margin-right: auto;
+            z-index: 20;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            width: 240px;
+            height: 240px;
+            border: none;
+            border-radius: 0;
+            overflow: visible;
+            background: transparent;
+        }
+
+        .composition-content {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 100%;
+            height: 100%;
+            transform: translate(-50%, -50%) scale(1);
+            transform-origin: center center;
+        }
+
+        .avatar-mask {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 1;
+            background: transparent;
+        }
+
+        #user-avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #frame-overlay {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+            pointer-events: none;
+            object-fit: fill;
+            transform-origin: center center;
+        }
+
+        .preview-controls {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 520px;
+        }
+
+        .slider-control {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        .slider-control input {
+            flex: 1;
+        }
+
+        .value-tag {
+            min-width: 46px;
+            text-align: right;
+            color: #444;
+            font-size: 12px;
+        }
+
+        .frame-list-container {
+            max-height: none;
+            overflow: visible;
+        }
+
+        .frame-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+            gap: 10px;
+        }
+
+        .frame-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            padding: 6px;
+            border: 1px solid #dadada;
+            border-radius: 8px;
+            background: #ffffff;
+            transition: all 0.2s;
+        }
+
+        .frame-item:hover,
+        .frame-item.active {
+            border-color: #8a8a8a;
+            background-color: #f1f1f1;
+        }
+
+        .frame-thumb {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+        }
+
+        .frame-name {
+            font-size: 10px;
+            text-align: center;
+            margin-top: 5px;
+            word-break: break-all;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            color: #505050;
+        }
+
+        .small-select {
+            flex: 1;
+            min-width: 180px;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #d0d0d0;
+            background: #ffffff;
+            color: var(--text-main);
+        }
+
+        .copy-mini-btn {
+            width: 100%;
+            margin-top: 4px;
+            font-size: 10px;
+            padding: 3px 4px;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 30, 30, 0.9);
+            color: #f8f8f8;
+            border: 1px solid #5f5f5f;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        body.compact-mode .preview-area {
+            position: fixed;
+            left: 8px;
+            top: 8px;
+            margin: 0;
+            z-index: 300;
+            background: rgba(255, 255, 255, 0.86);
+            border: 1px solid #cfcfcf;
+            border-radius: 10px;
+            padding: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        body.compact-mode .preview-controls {
+            display: none;
+        }
+
+        body.compact-mode .canvas-wrapper {
+            width: 116px !important;
+            height: 116px !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card control-panel">
+        <h2>设置与数据</h2>
+
+        <div class="file-input-wrapper">
+            <button class="btn">导入头像框文件（离线推荐 JSON / TXT）</button>
+            <input type="file" id="jsonInput" accept=".json,.txt,.zip">
+        </div>
+        <div id="file-info" class="label-text">暂未导入文件库（离线版）</div>
+        <div class="label-text">说明：离线版不依赖网络，ZIP 请先解压后导入其中 JSON。</div>
+
+        <div class="row">
+            <select id="librarySelect" class="small-select"></select>
+            <button class="btn btn-outline" id="removeLibraryBtn" style="width:auto;">删除当前文件库</button>
+            <button class="btn btn-outline" id="clearLibrariesBtn" style="width:auto;">清空全部文件库</button>
+        </div>
+
+        <div class="file-input-wrapper">
+            <button class="btn btn-outline" onclick="document.getElementById('avatarInput').click()">上传或更换头像</button>
+            <input type="file" id="avatarInput" accept="image/*" style="display:none">
+        </div>
+
+        <div class="row">
+            <input type="text" id="avatarUrl" class="input" placeholder="或输入头像图片链接">
+            <button class="btn" style="width:auto;" id="loadAvatarUrlBtn">加载头像链接</button>
+        </div>
+    </div>
+
+    <div class="card preview-area">
+        <div class="canvas-wrapper" id="previewBox">
+            <div id="compositionContent" class="composition-content">
+                <div class="avatar-mask">
+                    <img id="user-avatar" src="" style="display:none;">
+                </div>
+                <img id="frame-overlay" src="" style="display:none;">
+            </div>
+        </div>
+
+        <div class="preview-controls">
+            <div class="slider-control">
+                <span>预览大小</span>
+                <input id="previewSizeRange" type="range" min="120" max="460" value="240">
+                <span class="value-tag" id="previewSizeVal">240</span>
+            </div>
+            <div class="slider-control">
+                <span>整体缩放</span>
+                <input id="globalScaleRange" type="range" min="0.20" max="1.60" step="0.01" value="1">
+                <span class="value-tag" id="globalScaleVal">1.00</span>
+            </div>
+            <details>
+                <summary class="label-text" style="cursor:pointer;">头像框微调参数</summary>
+                <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
+                    <div class="slider-control">
+                        <span>框缩放</span>
+                        <input id="frameScaleRange" type="range" min="0.10" max="6.00" step="0.01" value="1">
+                        <span class="value-tag" id="frameScaleVal">1.00</span>
+                    </div>
+                    <div class="slider-control">
+                        <span>框X偏移</span>
+                        <input id="frameXRange" type="range" min="-500" max="500" step="1" value="0">
+                        <span class="value-tag" id="frameXVal">0</span>
+                    </div>
+                    <div class="slider-control">
+                        <span>框Y偏移</span>
+                        <input id="frameYRange" type="range" min="-500" max="500" step="1" value="0">
+                        <span class="value-tag" id="frameYVal">0</span>
+                    </div>
+                    <button class="btn btn-outline" id="resetAdjustBtn" style="margin-top:4px;">重置微调参数</button>
+                </div>
+            </details>
+        </div>
+    </div>
+
+    <div class="card frame-list-container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h2>头像框列表 <span id="count" style="font-size:12px; color:#898989;">(0)</span></h2>
+        </div>
+        <div id="grid" class="frame-grid">
+            <div style="grid-column: 1/-1; text-align:center; padding:20px; color:#888;">
+                请先导入头像框文件
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast">提示</div>
+
+<script>
+    /* ▼▼▼ 本地存储键名：轻量键值只放基础状态 ▼▼▼ */
+    const STORAGE_KEYS = {
+        libraries_legacy: "af_libraries_v2",
+        activeLibraryId: "af_active_library_id_v3",
+        avatarSrc: "af_avatar_src_v3",
+        uiState: "af_ui_state_v3"
+    };
+
+    /* ▼▼▼ IndexedDB 配置：把头像框库按“单个文件库”分条存储，避免大包写入失败 ▼▼▼ */
+    const IDB_CONF = {
+        dbName: "avatar_frame_db_v3",
+        version: 2,
+        kvStore: "kv",
+        librariesStore: "libraries"
+    };
+
+    let libraries = [];
+    let activeLibraryId = "";
+    let frameData = [];
+    let selectedFrameUrl = "";
+    let frameSettings = { scale: 1, x: 0, y: 0 };
+    let uiSettings = { previewSize: 240, globalScale: 1 };
+    let storageWarningShown = false;
+
+    const previewBox = document.getElementById("previewBox");
+    const compositionContent = document.getElementById("compositionContent");
+    const userAvatar = document.getElementById("user-avatar");
+    const frameOverlay = document.getElementById("frame-overlay");
+    const grid = document.getElementById("grid");
+    const toastInfo = document.getElementById("toast");
+
+    const jsonInput = document.getElementById("jsonInput");
+    const avatarInput = document.getElementById("avatarInput");
+    const avatarUrlInput = document.getElementById("avatarUrl");
+    const librarySelect = document.getElementById("librarySelect");
+    const fileInfo = document.getElementById("file-info");
+
+    const previewSizeRange = document.getElementById("previewSizeRange");
+    const globalScaleRange = document.getElementById("globalScaleRange");
+    const frameScaleRange = document.getElementById("frameScaleRange");
+    const frameXRange = document.getElementById("frameXRange");
+    const frameYRange = document.getElementById("frameYRange");
+
+    init();
+
+    /* ▼▼▼ 初始化流程：优先从分条库恢复，兼容老版本迁移 ▼▼▼ */
+    async function init() {
+        await loadPersistedLibraries();
+        await loadPersistedAvatar();
+        await loadPersistedUIState();
+        renderLibrarySelect();
+        applyUIState();
+        bindEvents();
+        setupCompactModeOnScroll();
+        if (activeLibraryId) {
+            setActiveLibrary(activeLibraryId, true);
+        } else {
+            renderList();
+        }
+    }
+
+    function bindEvents() {
+        jsonInput.addEventListener("change", onImportFile);
+        avatarInput.addEventListener("change", onAvatarFileChange);
+        document.getElementById("loadAvatarUrlBtn").addEventListener("click", loadAvatarUrl);
+        librarySelect.addEventListener("change", () => setActiveLibrary(librarySelect.value));
+        document.getElementById("removeLibraryBtn").addEventListener("click", removeCurrentLibrary);
+        document.getElementById("clearLibrariesBtn").addEventListener("click", clearAllLibraries);
+        document.getElementById("resetAdjustBtn").addEventListener("click", resetFrameAdjust);
+
+        previewSizeRange.addEventListener("input", () => {
+            uiSettings.previewSize = Number(previewSizeRange.value);
+            applyUIState();
+            persistUIState();
+        });
+        globalScaleRange.addEventListener("input", () => {
+            uiSettings.globalScale = Number(globalScaleRange.value);
+            applyUIState();
+            persistUIState();
+        });
+        frameScaleRange.addEventListener("input", () => adjustFrame("scale", frameScaleRange.value));
+        frameXRange.addEventListener("input", () => adjustFrame("x", frameXRange.value));
+        frameYRange.addEventListener("input", () => adjustFrame("y", frameYRange.value));
+    }
+
+    function setupCompactModeOnScroll() {
+        const onScroll = () => {
+            if (window.scrollY > 220) document.body.classList.add("compact-mode");
+            else document.body.classList.remove("compact-mode");
+        };
+        window.addEventListener("scroll", onScroll, { passive: true });
+        onScroll();
+    }
+
+    async function onImportFile(e) {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        fileInfo.textContent = `正在导入: ${file.name}`;
+        try {
+            const parsedFrames = await parseFileToFrames(file);
+            if (!parsedFrames.length) {
+                showToast("未解析到可用头像框数据");
+                return;
+            }
+
+            /* ▼▼▼ 关键点：导入时只写入当前文件库记录，避免整包重写 ▼▼▼ */
+            const lib = {
+                id: "lib_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7),
+                name: file.name,
+                frames: parsedFrames,
+                addedAt: Date.now()
+            };
+
+            libraries.unshift(lib);
+            await idbPutLibrary(lib);
+            await persistLightweightLibraryMeta();
+
+            renderLibrarySelect();
+            setActiveLibrary(lib.id);
+            showToast(`导入成功: ${lib.frames.length} 个头像框`);
+        } catch (err) {
+            console.error(err);
+            showToast(err.message || "导入失败，请检查文件内容");
+            fileInfo.textContent = "导入失败";
+        } finally {
+            jsonInput.value = "";
+        }
+    }
+
+    async function parseFileToFrames(file) {
+        const name = file.name.toLowerCase();
+        if (name.endsWith(".zip")) {
+            throw new Error("离线版暂不直接解析 ZIP。请先解压 ZIP，再导入其中 JSON 文件。");
+        }
+        if (name.endsWith(".json") || name.endsWith(".txt")) {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            return extractFrames(data);
+        }
+        throw new Error("暂不支持此文件类型");
+    }
+
+    function extractFrames(data) {
+        let rawList = [];
+        if (Array.isArray(data)) rawList = data;
+        else if (data && Array.isArray(data.frames)) rawList = data.frames;
+        else if (data && Array.isArray(data.items)) rawList = data.items;
+        else if (data && Array.isArray(data.list)) rawList = data.list;
+        else if (data && typeof data === "object") {
+            rawList = Object.keys(data).map((key) => ({ name: key, ...(data[key] || {}) }));
+        }
+        return rawList.map((item, idx) => normalizeFrameItem(item, idx)).filter(Boolean);
+    }
+
+    function normalizeFrameItem(item, idx) {
+        if (typeof item === "string") return { name: `头像框${idx + 1}`, url: item };
+        if (!item || typeof item !== "object") return null;
+        const url = item.url || item.src || item.img || item.link || item.image || item.cover || "";
+        if (!url) return null;
+        const name = item.name || item.title || item.label || `头像框${idx + 1}`;
+        return { name, url };
+    }
+
+    function renderLibrarySelect() {
+        if (!libraries.length) {
+            librarySelect.innerHTML = `<option value="">暂无文件库</option>`;
+            fileInfo.textContent = "暂未导入文件库（离线版）";
+            return;
+        }
+
+        librarySelect.innerHTML = libraries
+            .map((lib) => `<option value="${lib.id}">${escapeHtml(lib.name)} (${lib.frames.length})</option>`)
+            .join("");
+
+        if (activeLibraryId && libraries.some((lib) => lib.id === activeLibraryId)) {
+            librarySelect.value = activeLibraryId;
+        } else {
+            activeLibraryId = libraries[0].id;
+            librarySelect.value = activeLibraryId;
+        }
+    }
+
+    function setActiveLibrary(id, skipToast) {
+        const lib = libraries.find((item) => item.id === id);
+        if (!lib) {
+            frameData = [];
+            activeLibraryId = "";
+            persistActiveLibraryId();
+            renderList();
+            return;
+        }
+
+        activeLibraryId = id;
+        frameData = lib.frames || [];
+        fileInfo.textContent = `当前文件库: ${lib.name}（${frameData.length}）`;
+        persistActiveLibraryId();
+        renderList();
+        if (!skipToast) showToast(`已切换文件库: ${lib.name}`);
+    }
+
+    async function removeCurrentLibrary() {
+        if (!activeLibraryId) return;
+        const removeId = activeLibraryId;
+        libraries = libraries.filter((lib) => lib.id !== removeId);
+        await idbDeleteLibrary(removeId);
+        await persistLightweightLibraryMeta();
+
+        activeLibraryId = libraries[0] ? libraries[0].id : "";
+        await persistActiveLibraryId();
+        renderLibrarySelect();
+        setActiveLibrary(activeLibraryId, true);
+        showToast("当前文件库已删除");
+    }
+
+    async function clearAllLibraries() {
+        libraries = [];
+        frameData = [];
+        selectedFrameUrl = "";
+        frameOverlay.src = "";
+        frameOverlay.style.display = "none";
+        await persistSelectedFrame();
+
+        await idbClearLibraries();
+        await persistLightweightLibraryMeta();
+
+        activeLibraryId = "";
+        await persistActiveLibraryId();
+        renderLibrarySelect();
+        renderList();
+        showToast("已清空全部文件库");
+    }
+
+    function renderList() {
+        grid.innerHTML = "";
+        document.getElementById("count").textContent = `(${frameData.length})`;
+        if (!frameData.length) {
+            grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:20px; color:#888;">当前没有可用头像框</div>`;
+            return;
+        }
+
+        frameData.forEach((item, index) => {
+            const div = document.createElement("div");
+            div.className = "frame-item";
+            if (selectedFrameUrl && selectedFrameUrl === item.url) div.classList.add("active");
+
+            const encodedUrl = encodeURIComponent(item.url);
+            div.innerHTML = `
+                <img src="${escapeHtml(item.url)}" class="frame-thumb" loading="lazy">
+                <div class="frame-name">${escapeHtml(item.name || ("头像框" + (index + 1)))}</div>
+                <button class="btn btn-outline copy-mini-btn" onclick="copyLinkFromEncoded('${encodedUrl}', event)">复制链接</button>
+            `;
+
+            div.addEventListener("click", (evt) => {
+                if (evt.target.tagName === "BUTTON") return;
+                setFrame(item.url);
+                document.querySelectorAll(".frame-item").forEach((el) => el.classList.remove("active"));
+                div.classList.add("active");
+            });
+
+            grid.appendChild(div);
+        });
+    }
+
+    function setFrame(url) {
+        selectedFrameUrl = url || "";
+        if (!selectedFrameUrl) {
+            frameOverlay.src = "";
+            frameOverlay.style.display = "none";
+            persistSelectedFrame();
+            return;
+        }
+        frameOverlay.src = selectedFrameUrl;
+        frameOverlay.style.display = "block";
+        persistSelectedFrame();
+    }
+
+    function onAvatarFileChange(inputEvent) {
+        const file = inputEvent.target.files && inputEvent.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async function (evt) {
+            const src = evt.target.result;
+            setAvatarSource(src);
+            await persistValue(STORAGE_KEYS.avatarSrc, src);
+        };
+        reader.readAsDataURL(file);
+        avatarInput.value = "";
+    }
+
+    async function loadAvatarUrl() {
+        const url = avatarUrlInput.value.trim();
+        if (!url) return;
+        setAvatarSource(url);
+        await persistValue(STORAGE_KEYS.avatarSrc, url);
+    }
+
+    function setAvatarSource(src) {
+        userAvatar.src = src;
+        userAvatar.style.display = "block";
+        showToast("头像已更新");
+    }
+
+    function adjustFrame(type, val) {
+        if (type === "scale") frameSettings.scale = Number(val);
+        if (type === "x") frameSettings.x = Number(val);
+        if (type === "y") frameSettings.y = Number(val);
+        applyFrameTransform();
+        persistUIState();
+    }
+
+    function applyFrameTransform() {
+        frameOverlay.style.transform = `translate(${frameSettings.x}px, ${frameSettings.y}px) scale(${frameSettings.scale})`;
+        document.getElementById("frameScaleVal").textContent = frameSettings.scale.toFixed(2);
+        document.getElementById("frameXVal").textContent = String(frameSettings.x);
+        document.getElementById("frameYVal").textContent = String(frameSettings.y);
+    }
+
+    function resetFrameAdjust() {
+        frameSettings = { scale: 1, x: 0, y: 0 };
+        frameScaleRange.value = "1";
+        frameXRange.value = "0";
+        frameYRange.value = "0";
+        applyFrameTransform();
+        persistUIState();
+        showToast("微调参数已重置");
+    }
+
+    function applyUIState() {
+        previewBox.style.width = uiSettings.previewSize + "px";
+        previewBox.style.height = uiSettings.previewSize + "px";
+        compositionContent.style.transform = `translate(-50%, -50%) scale(${uiSettings.globalScale})`;
+
+        previewSizeRange.value = String(uiSettings.previewSize);
+        globalScaleRange.value = String(uiSettings.globalScale);
+        frameScaleRange.value = String(frameSettings.scale);
+        frameXRange.value = String(frameSettings.x);
+        frameYRange.value = String(frameSettings.y);
+
+        document.getElementById("previewSizeVal").textContent = String(uiSettings.previewSize);
+        document.getElementById("globalScaleVal").textContent = uiSettings.globalScale.toFixed(2);
+        applyFrameTransform();
+    }
+
+    /* ▼▼▼ 加载文件库：优先读取分条存储，失败再读旧版本整包，自动迁移 ▼▼▼ */
+    async function loadPersistedLibraries() {
+        const dbLibs = await idbGetAllLibraries();
+        if (dbLibs.length) {
+            libraries = dbLibs.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+        } else {
+            /* ▼▼▼ 兼容迁移：把旧版本 localStorage 整包迁移到分条库 ▼▼▼ */
+            const legacy = await readPersistedValue(STORAGE_KEYS.libraries_legacy, []);
+            libraries = Array.isArray(legacy) ? legacy : [];
+            if (libraries.length) {
+                for (const lib of libraries) {
+                    await idbPutLibrary(lib);
+                }
+            }
+        }
+        activeLibraryId = (await readPersistedValue(STORAGE_KEYS.activeLibraryId, "")) || "";
+        await persistLightweightLibraryMeta();
+    }
+
+    /* ▼▼▼ 轻量元信息：只存 id/name/count，不再把 500+ 详情塞进 localStorage ▼▼▼ */
+    async function persistLightweightLibraryMeta() {
+        const lightweight = libraries.map((lib) => ({
+            id: lib.id,
+            name: lib.name,
+            count: Array.isArray(lib.frames) ? lib.frames.length : 0,
+            addedAt: lib.addedAt || Date.now()
+        }));
+        await persistValue("af_libraries_light_meta_v3", lightweight);
+    }
+
+    async function persistActiveLibraryId() {
+        await persistValue(STORAGE_KEYS.activeLibraryId, activeLibraryId || "");
+    }
+
+    async function persistSelectedFrame() {
+        const state = await readPersistedValue(STORAGE_KEYS.uiState, {});
+        state.selectedFrameUrl = selectedFrameUrl || "";
+        await persistValue(STORAGE_KEYS.uiState, state);
+    }
+
+    async function persistUIState() {
+        const state = await readPersistedValue(STORAGE_KEYS.uiState, {});
+        state.previewSize = uiSettings.previewSize;
+        state.globalScale = uiSettings.globalScale;
+        state.frameSettings = frameSettings;
+        state.selectedFrameUrl = selectedFrameUrl || "";
+        await persistValue(STORAGE_KEYS.uiState, state);
+    }
+
+    async function loadPersistedUIState() {
+        const state = (await readPersistedValue(STORAGE_KEYS.uiState, {})) || {};
+        if (state.previewSize) uiSettings.previewSize = Number(state.previewSize);
+        if (state.globalScale) uiSettings.globalScale = Number(state.globalScale);
+        if (state.frameSettings) {
+            frameSettings = {
+                scale: Number(state.frameSettings.scale ?? 1),
+                x: Number(state.frameSettings.x ?? 0),
+                y: Number(state.frameSettings.y ?? 0)
+            };
+        }
+        selectedFrameUrl = state.selectedFrameUrl || "";
+    }
+
+    async function loadPersistedAvatar() {
+        const src = await readPersistedValue(STORAGE_KEYS.avatarSrc, "");
+        if (src) {
+            userAvatar.src = src;
+            userAvatar.style.display = "block";
+        }
+    }
+
+    /* ▼▼▼ 通用键值持久化：kv 用 localStorage+IndexedDB 双写 ▼▼▼ */
+    async function persistValue(key, value) {
+        const text = JSON.stringify(value);
+        const lsOk = setLocalStorageText(key, text);
+        const idbOk = await idbSetKV(key, value);
+        if (!lsOk && !idbOk && !storageWarningShown) {
+            storageWarningShown = true;
+            showToast("存储容量不足，建议分批导入头像框");
+        }
+    }
+
+    async function readPersistedValue(key, fallbackValue) {
+        const lsText = getLocalStorageText(key);
+        if (lsText) {
+            try {
+                return JSON.parse(lsText);
+            } catch (err) {
+                return fallbackValue;
+            }
+        }
+        const idbValue = await idbGetKV(key);
+        if (idbValue !== undefined) return idbValue;
+        return fallbackValue;
+    }
+
+    function setLocalStorageText(key, text) {
+        try {
+            localStorage.setItem(key, text);
+            return true;
+        } catch (err) {
+            return false;
+        }
+    }
+
+    function getLocalStorageText(key) {
+        try {
+            return localStorage.getItem(key);
+        } catch (err) {
+            return null;
+        }
+    }
+
+    /* ▼▼▼ IndexedDB 基础：创建 kv 和 libraries 两个仓库 ▼▼▼ */
+    function openIdb() {
+        return new Promise((resolve) => {
+            if (!window.indexedDB) {
+                resolve(null);
+                return;
+            }
+            let req;
+            try {
+                req = indexedDB.open(IDB_CONF.dbName, IDB_CONF.version);
+            } catch (err) {
+                resolve(null);
+                return;
+            }
+            req.onupgradeneeded = function () {
+                const db = req.result;
+                if (!db.objectStoreNames.contains(IDB_CONF.kvStore)) {
+                    db.createObjectStore(IDB_CONF.kvStore, { keyPath: "k" });
+                }
+                if (!db.objectStoreNames.contains(IDB_CONF.librariesStore)) {
+                    db.createObjectStore(IDB_CONF.librariesStore, { keyPath: "id" });
+                }
+            };
+            req.onsuccess = function () {
+                resolve(req.result);
+            };
+            req.onerror = function () {
+                resolve(null);
+            };
+        });
+    }
+
+    async function idbSetKV(key, value) {
+        const db = await openIdb();
+        if (!db) return false;
+        return new Promise((resolve) => {
+            const tx = db.transaction(IDB_CONF.kvStore, "readwrite");
+            tx.objectStore(IDB_CONF.kvStore).put({ k: key, v: value });
+            tx.oncomplete = function () { db.close(); resolve(true); };
+            tx.onerror = function () { db.close(); resolve(false); };
+        });
+    }
+
+    async function idbGetKV(key) {
+        const db = await openIdb();
+        if (!db) return undefined;
+        return new Promise((resolve) => {
+            const tx = db.transaction(IDB_CONF.kvStore, "readonly");
+            const req = tx.objectStore(IDB_CONF.kvStore).get(key);
+            req.onsuccess = function () { db.close(); resolve(req.result ? req.result.v : undefined); };
+            req.onerror = function () { db.close(); resolve(undefined); };
+        });
+    }
+
+    /* ▼▼▼ 大数据关键：头像框库分条写入/读取/删除/清空 ▼▼▼ */
+    async function idbPutLibrary(lib) {
+        const db = await openIdb();
+        if (!db) return false;
+        return new Promise((resolve) => {
+            const tx = db.transaction(IDB_CONF.librariesStore, "readwrite");
+            tx.objectStore(IDB_CONF.librariesStore).put(lib);
+            tx.oncomplete = function () { db.close(); resolve(true); };
+            tx.onerror = function () { db.close(); resolve(false); };
+        });
+    }
+
+    async function idbDeleteLibrary(id) {
+        const db = await openIdb();
+        if (!db) return false;
+        return new Promise((resolve) => {
+            const tx = db.transaction(IDB_CONF.librariesStore, "readwrite");
+            tx.objectStore(IDB_CONF.librariesStore).delete(id);
+            tx.oncomplete = function () { db.close(); resolve(true); };
+            tx.onerror = function () { db.close(); resolve(false); };
+        });
+    }
+
+    async function idbClearLibraries() {
+        const db = await openIdb();
+        if (!db) return false;
+        return new Promise((resolve) => {
+            const tx = db.transaction(IDB_CONF.librariesStore, "readwrite");
+            tx.objectStore(IDB_CONF.librariesStore).clear();
+            tx.oncomplete = function () { db.close(); resolve(true); };
+            tx.onerror = function () { db.close(); resolve(false); };
+        });
+    }
+
+    async function idbGetAllLibraries() {
+        const db = await openIdb();
+        if (!db) return [];
+        return new Promise((resolve) => {
+            const tx = db.transaction(IDB_CONF.librariesStore, "readonly");
+            const req = tx.objectStore(IDB_CONF.librariesStore).getAll();
+            req.onsuccess = function () { db.close(); resolve(Array.isArray(req.result) ? req.result : []); };
+            req.onerror = function () { db.close(); resolve([]); };
+        });
+    }
+
+    frameOverlay.addEventListener("load", () => {
+        if (selectedFrameUrl) frameOverlay.style.display = "block";
+    });
+
+    window.addEventListener("load", () => {
+        if (selectedFrameUrl) setFrame(selectedFrameUrl);
+    });
+
+    function copyLinkFromEncoded(encoded, evt) {
+        evt.stopPropagation();
+        const url = decodeURIComponent(encoded);
+        copyLink(url);
+    }
+
+    async function copyLink(url) {
+        try {
+            await navigator.clipboard.writeText(url);
+            showToast("链接已复制");
+        } catch (err) {
+            const textArea = document.createElement("textarea");
+            textArea.value = url;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand("copy");
+                showToast("链接已复制（兼容模式）");
+            } catch (copyErr) {
+                prompt("请手动复制链接：", url);
+            }
+            document.body.removeChild(textArea);
+        }
+    }
+
+    function showToast(msg) {
+        toastInfo.textContent = msg;
+        toastInfo.style.opacity = "1";
+        setTimeout(() => { toastInfo.style.opacity = "0"; }, 2200);
+    }
+
+    function escapeHtml(str) {
+        return String(str)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#39;");
+    }
+</script>
+
+</body>
+</html>
